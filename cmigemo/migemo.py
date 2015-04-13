@@ -1,8 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import six
+from ctypes import Structure
+from ctypes import c_int
+from ctypes import c_void_p
+from ctypes import c_char_p
+from ctypes import c_bool
+from ctypes import cdll
+from ctypes import POINTER
+from ctypes import cast
+from ctypes.util import find_library
+import platform
 
-from ctypes import *
 
 class MigemoStruct(Structure):
     _fields_ = [
@@ -17,6 +26,7 @@ class MigemoStruct(Structure):
         ("addword", c_void_p),
         ("char2int", c_void_p)
     ]
+
 
 class Migemo(object):
     migemo_struct = None
@@ -41,12 +51,12 @@ class Migemo(object):
                                                           self.path_encoding)
         return self.libmigemo.migemo_open(dictionary_path_raw)
 
-    def _load_libmigemo(self, lib_name = "libmigemo.so"):
-        import platform
+    def _load_libmigemo(self, lib_name="migemo"):
         if platform.system() == u"Windows":
+            from ctypes import windll
             libmigemo = windll.migemo
         else:
-            libmigemo = cdll.LoadLibrary(lib_name)
+            libmigemo = cdll.LoadLibrary(find_library(lib_name))
         libmigemo.migemo_open.restype = POINTER(MigemoStruct)
         libmigemo.migemo_get_operator.restype = c_char_p
         libmigemo.migemo_set_operator.restype = c_bool
@@ -74,6 +84,7 @@ class Migemo(object):
         2: "euc_jp",
         3: "utf_8",
     }
+
     def get_encoding(self):
         return self.charset_map[self.migemo_struct.contents.charset]
 
@@ -89,7 +100,8 @@ class Migemo(object):
 
     def _migemo_query(self, query_string):
         query_bytes = self._ensure_string_encoded(query_string)
-        regexp_ptr = self.libmigemo.migemo_query(self.migemo_struct, query_bytes)
+        regexp_ptr = self.libmigemo.migemo_query(self.migemo_struct,
+                                                 query_bytes)
         return regexp_ptr
 
     def _ptr_to_python_string(self, ptr):
@@ -110,9 +122,11 @@ class Migemo(object):
         return regexp_string
 
     def get_operator(self, index):
-        operator_bytes = self.libmigemo.migemo_get_operator(self.migemo_struct, index)
+        operator_bytes = self.libmigemo.migemo_get_operator(self.migemo_struct,
+                                                            index)
         return operator_bytes.decode(self.get_encoding())
 
     def set_operator(self, index, operator):
         operator_bytes = self._ensure_string_encoded(operator)
-        return self.libmigemo.migemo_set_operator(self.migemo_struct, index, operator_bytes)
+        return self.libmigemo.migemo_set_operator(self.migemo_struct, index,
+                                                  operator_bytes)
