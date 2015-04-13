@@ -2,3 +2,5 @@
 *#
 *.pyc
 cmigemo.egg-info
+build
+dist
